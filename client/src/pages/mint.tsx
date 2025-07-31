@@ -260,7 +260,7 @@ export default function MintPage() {
         tokenId={mintingState.tokenId}
         onViewNFT={() => {
           // TODO: Implement NFT viewer
-          window.open(`https://explorer.testnet.near.org/accounts/${accountId}`, '_blank');
+          window.open(`https://testnet.nearblocks.io/ru/address/${accountId}?tab=nfttokentxns`, '_blank');
         }}
         onMintAnother={handleMintAnother}
       />
