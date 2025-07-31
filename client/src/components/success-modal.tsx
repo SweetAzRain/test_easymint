@@ -29,7 +29,7 @@ export function SuccessModal({ isOpen, tokenId, onViewNFT, onMintAnother, onClos
 
           {tokenId && (
             <div className="bg-gray-700/50 rounded-lg p-4 mx-auto max-w-xs">
-              <p className="text-sm text-gray-400 mb-2 text-center">Token ID:</p>
+              <p className="text-sm text-gray-400 mb-2 text-center">Transaction Hash:</p>
               <p className="font-mono text-primary text-center text-sm break-all">#{tokenId}</p>
             </div>
           )}
