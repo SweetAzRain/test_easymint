@@ -263,7 +263,7 @@ import { useState } from "react";
            isOpen={mintingState.showSuccess}
            tokenId={mintingState.tokenId}
            onViewNFT={() => {
-             window.open(`https://explorer.testnet.near.org/accounts/${accountId}`, '_blank');
+             window.open(`https://testnet.nearblocks.io/ru/address/${accountId}?tab=nfttokentxns`, '_blank');
            }}
            onMintAnother={handleMintAnother}
            onClose={handleCloseSuccess}
