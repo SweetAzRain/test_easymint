@@ -7,8 +7,7 @@ export function useIPFSUpload() {
   const uploadToIPFS = async (
     file: File, 
     title: string, 
-    description: string,
-    properties: Array<{ name: string; value: string }> = []
+    description: string
   ) => {
     setIsUploading(true);
 
@@ -24,8 +23,7 @@ export function useIPFSUpload() {
       const metadata = generateMetadata(
         title,
         description,
-        imageResult.url,
-        properties
+        imageResult.url
       );
 
       // Create metadata blob and upload
