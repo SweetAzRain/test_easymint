@@ -94,21 +94,10 @@ export function generateMetadata(
   title: string,
   description: string,
   mediaUrl: string,
-  properties: Array<{ name: string; value: string }> = [],
 ): any {
-  const metadata: any = {
+  return {
     title,
     description,
-    media: mediaUrl,
-    properties: {},
+    media: mediaUrl
   };
-
-  // Add properties if provided
-  properties.forEach((prop) => {
-    if (prop.name.trim() && prop.value.trim()) {
-      metadata.properties[prop.name.trim()] = prop.value.trim();
-    }
-  });
-
-  return metadata;
 }
