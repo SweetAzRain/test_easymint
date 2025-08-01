@@ -26,7 +26,7 @@ export async function mintNFT(params: MintParams, wallet?: any): Promise<MintRes
     // Real wallet implementation
     console.log("Calling NEAR smart contract...");
     const result = await wallet.signAndSendTransaction({
-      receiverId: "easy-proxy.testnet", // Updated for testnet
+      receiverId: "monkey_proxy.testnet", // Updated for testnet
       actions: [{
         type: "FunctionCall",
         params: {
