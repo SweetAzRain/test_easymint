@@ -12,10 +12,12 @@ interface NearWalletState {
   wallet?: any; // Consider typing this more specifically if possible
 }
 
+// Key accountId in localStorage
+const ACCOUNT_ID_STORAGE_KEY = 'near-connected-account-id';
+
 export function useNearWallet() {
   const [walletState, setWalletState] = useState<NearWalletState>({
     isConnected: false
-  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -25,24 +27,50 @@ export function useNearWallet() {
   const initializeWallet = async () => {
     try {
       console.log("Initializing NEAR wallet selector...");
+      
       const selector = new WalletSelector({
         network: "testnet",
-        // Support all compatible wallets with required features
         features: {
           signAndSendTransaction: true,
-          testnet: true
         }
       });
       const modal = new WalletSelectorUI(selector);
 
-      // Set up event listeners
+      let initialConnected = false;
+      let initialAccountId: string | undefined = undefined;
+      let initialWalletInstance: any = undefined;
+      
+      try {
+        const connectedWallet = await selector.wallet();
+        const accounts = await connectedWallet.getAccounts();
+        if (accounts && accounts.length > 0) {
+             initialConnected = true;
+             initialAccountId = accounts[0].accountId;
+             initialWalletInstance = connectedWallet;
+             console.log("Wallet was already connected on init:", initialAccountId);
+             const storedAccountId = localStorage.getItem(ACCOUNT_ID_STORAGE_KEY);
+             if (storedAccountId !== initialAccountId) {
+                 localStorage.setItem(ACCOUNT_ID_STORAGE_KEY, initialAccountId);
+             }
+        } else {
+            console.log("Wallet selected but no accounts found on init.");
+            localStorage.removeItem(ACCOUNT_ID_STORAGE_KEY);
+        }
+      } catch (checkError) {
+         console.log("No wallet was connected initially or failed to get wallet/accounts:", checkError);
+         localStorage.removeItem(ACCOUNT_ID_STORAGE_KEY);
+      }
+
       selector.on("wallet:signOut", async () => {
-        console.log("Wallet signed out");
+        console.log("Wallet signed out (event received)");
         setWalletState({
           isConnected: false,
           selector,
-          modal
+          modal,
+          accountId: undefined,
+          wallet: undefined
         });
+        localStorage.removeItem(ACCOUNT_ID_STORAGE_KEY);
         toast({
           title: "Wallet Disconnected",
           description: "You have been signed out from your wallet."
@@ -50,18 +78,19 @@ export function useNearWallet() {
       });
 
       selector.on("wallet:signIn", async (event) => {
-        console.log("Wallet signed in:", event);
+        console.log("Wallet signed in (event received):", event);
         if (event.accounts && event.accounts.length > 0) {
           const accountId = event.accounts[0].accountId;
           try {
-              const wallet = await selector.wallet(); // Get the specific wallet instance
+              const wallet = await selector.wallet();
               setWalletState({
                 isConnected: true,
                 accountId,
                 selector,
                 modal,
-                wallet // Store the actual wallet instance
+                wallet
               });
+              localStorage.setItem(ACCOUNT_ID_STORAGE_KEY, accountId);
               toast({
                 title: "Wallet Connected",
                 description: `Connected as ${accountId}.`
@@ -73,123 +102,125 @@ export function useNearWallet() {
                 description: "Failed to finalize wallet connection. Please try again.",
                 variant: "destructive"
               });
-               // Reset state on error
-              setWalletState({ isConnected: false, selector, modal });
+              setWalletState({ isConnected: false, selector, modal, accountId: undefined, wallet: undefined });
+              localStorage.removeItem(ACCOUNT_ID_STORAGE_KEY);
           }
         }
       });
 
-      // Set initial state with selector and modal
-      setWalletState({
-        isConnected: false,
+      setWalletState(prev => ({
+        isConnected: initialConnected,
+        accountId: initialAccountId,
         selector,
-        modal
-      });
-      console.log("NEAR wallet selector initialized successfully");
+        modal,
+        wallet: initialWalletInstance
+      }));
 
+      console.log("NEAR wallet selector initialized successfully");
     } catch (error) {
       console.error("Failed to initialize wallet selector:", error);
-      // Removed fallback to demo mode. Show an error instead.
+      localStorage.removeItem(ACCOUNT_ID_STORAGE_KEY);
       toast({
         title: "Initialization Failed",
         description: "Failed to initialize NEAR wallet. Please ensure you have a compatible wallet installed.",
         variant: "destructive"
       });
-      // Keep state as not connected
-      setWalletState({ isConnected: false });
+      setWalletState(prev => ({ isConnected: false, selector: prev.selector, modal: prev.modal }));
     }
   };
 
   const connectWallet = async () => {
-    try {
-      // Removed mock wallet connection fallback
-
-      // Use the modal UI to show all available wallets
-      if (walletState.modal) {
-        console.log("Opening wallet selection modal...");
+    if (walletState.modal) {
+      try {
+        console.log("Opening wallet connection modal...");
         walletState.modal.open();
-      } else {
-         // Handle case where modal isn't initialized (shouldn't happen if init succeeded)
-         throw new Error("Wallet modal is not available.");
+        console.log("Wallet connection modal opened.");
+      } catch (error) {
+        console.error("Failed to open wallet modal:", error);
+        toast({
+          title: "Connection Failed",
+          description: "Failed to open wallet connection window. Please try again.",
+          variant: "destructive"
+        });
       }
-    } catch (error) {
-      console.error("Failed to connect wallet:", error);
+    } else {
+      console.error("Wallet modal is not initialized.");
       toast({
-        title: "Connection Failed",
-        description: error instanceof Error ? error.message : "Failed to connect NEAR wallet. Please try again.",
+        title: "Initialization Error",
+        description: "Wallet modal is not ready. Please refresh the page.",
         variant: "destructive"
       });
     }
   };
 
   const disconnectWallet = async () => {
+    console.log("Attempting to disconnect wallet...");
     try {
-      // Removed mock wallet disconnection logic
-
-      if (walletState.wallet) {
+      if (walletState.wallet && walletState.isConnected) {
+        console.log("Calling wallet.signOut()...");
         await walletState.wallet.signOut();
-        // The signOut event listener will handle state update
-        // Note: Ensure the wallet instance has a signOut method
+        console.log("wallet.signOut() completed.");
       } else {
-         // Handle case where wallet is not connected but disconnect is called
          console.warn("Attempted to disconnect, but no wallet was connected.");
-         setWalletState(prev => ({ isConnected: false, selector: prev.selector, modal: prev.modal }));
+         setWalletState(prev => ({
+             isConnected: false,
+             selector: prev.selector,
+             modal: prev.modal,
+             accountId: undefined,
+             wallet: undefined
+         }));
+         localStorage.removeItem(ACCOUNT_ID_STORAGE_KEY);
          toast({
             title: "Not Connected",
             description: "No wallet was connected to disconnect.",
-            variant: "default" // or warning
+            variant: "default"
          });
       }
     } catch (error) {
-      console.error("Failed to disconnect wallet:", error);
+      console.error("Error during wallet.signOut() call:", error);
       toast({
-        title: "Disconnect Failed",
-        description: "Failed to disconnect wallet. You might need to disconnect manually in your wallet app.",
+        title: "Disconnect Issue",
+        description: `Disconnect process encountered an issue: ${error instanceof Error ? error.message : 'Unknown error'}. State will be reset locally.`,
         variant: "destructive"
       });
-      // Optionally, still update local state if the wallet app might have disconnected anyway
-      // setWalletState(prev => ({ isConnected: false, selector: prev.selector, modal: prev.modal }));
+    } finally {
+        console.log("Ensuring local state is disconnected in finally block...");
+        setWalletState(prev => ({
+            isConnected: false,
+            selector: prev.selector,
+            modal: prev.modal,
+            accountId: undefined,
+            wallet: undefined
+        }));
+        localStorage.removeItem(ACCOUNT_ID_STORAGE_KEY);
+        console.log("Local state disconnected.");
     }
   };
 
   const signAndSendTransaction = async (params: any) => {
+    if (!walletState.isConnected || !walletState.wallet) {
+      const errorMsg = "Wallet not connected. Please connect your wallet first.";
+      console.error(errorMsg);
+      toast({
+        title: "Action Failed",
+        description: errorMsg,
+        variant: "destructive"
+      });
+      throw new Error(errorMsg);
+    }
+
     try {
-      // Removed mock transaction logic
-
-      if (!walletState.wallet) {
-        const errorMsg = "Wallet not connected. Please connect your wallet first.";
-        console.error(errorMsg);
-        toast({
-            title: "Action Failed",
-            description: errorMsg,
-            variant: "destructive"
-        });
-        throw new Error(errorMsg); // Throw error to be caught by caller
-      }
-
-      // Ensure the wallet object has the required method before calling
-      if (typeof walletState.wallet.signAndSendTransaction !== 'function') {
-           const errorMsg = "Connected wallet does not support signing transactions.";
-           console.error(errorMsg);
-           toast({
-                title: "Unsupported Wallet",
-                description: errorMsg,
-                variant: "destructive"
-           });
-           throw new Error(errorMsg);
-      }
-
-
-      console.log("Sending transaction with params:", params);
       const result = await walletState.wallet.signAndSendTransaction(params);
       console.log("Transaction sent successfully:", result);
       return result;
-
     } catch (error) {
-      console.error("Transaction failed in hook:", error);
-      // Specific error handling can be added here if needed, but generally re-throw
-      // The mintNFT function already handles user rejection errors
-      throw error; // Re-throw for the caller (e.g., mintNFT) to handle
+      console.error("Failed to send transaction:", error);
+      toast({
+        title: "Transaction Failed",
+        description: `Failed to send transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+      throw error;
     }
   };
 
@@ -197,6 +228,6 @@ export function useNearWallet() {
     ...walletState,
     connectWallet,
     disconnectWallet,
-    signAndSendTransaction // Expose this for direct use or for mintNFT
+    signAndSendTransaction
   };
 }
