@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Edit, Hammer, Plus, Minus } from "lucide-react";
+import { Edit, Hammer } from "lucide-react";
 import type { NFTFormData } from "@/pages/mint";
 
 interface NFTFormProps {
@@ -31,26 +31,6 @@ export function NFTForm({ formData, onChange, onMint, isValid, isProcessing }: N
     
     onChange({ ...formData, description: value });
     setDescriptionError(value.trim() ? "" : "Description is required");
-  };
-
-  const addProperty = () => {
-    onChange({
-      ...formData,
-      properties: [...formData.properties, { name: "", value: "" }]
-    });
-  };
-
-  const removeProperty = (index: number) => {
-    onChange({
-      ...formData,
-      properties: formData.properties.filter((_, i) => i !== index)
-    });
-  };
-
-  const updateProperty = (index: number, field: 'name' | 'value', value: string) => {
-    const newProperties = [...formData.properties];
-    newProperties[index][field] = value;
-    onChange({ ...formData, properties: newProperties });
   };
 
   const getTitleCounterClass = () => {
@@ -122,50 +102,6 @@ export function NFTForm({ formData, onChange, onMint, isValid, isProcessing }: N
               {descriptionError && (
                 <p className="text-xs text-red-400 mt-1">{descriptionError}</p>
               )}
-            </div>
-
-            {/* Properties */}
-            <div>
-              <Label className="text-sm font-medium text-gray-300 mb-2 block">
-                Properties <span className="text-gray-500">(Optional)</span>
-              </Label>
-              <div className="space-y-3">
-                {formData.properties.map((property, index) => (
-                  <div key={index} className="flex space-x-3">
-                    <Input
-                      placeholder="Property name"
-                      value={property.name}
-                      onChange={(e) => updateProperty(index, 'name', e.target.value)}
-                      className="flex-1 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-primary focus:ring-primary/20 text-sm"
-                    />
-                    <Input
-                      placeholder="Value"
-                      value={property.value}
-                      onChange={(e) => updateProperty(index, 'value', e.target.value)}
-                      className="flex-1 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-primary focus:ring-primary/20 text-sm"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-400 hover:text-red-300 p-2"
-                      onClick={() => removeProperty(index)}
-                    >
-                      <Minus size={16} />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="mt-3 text-primary hover:text-primary/80 text-sm"
-                onClick={addProperty}
-              >
-                <Plus className="mr-1" size={16} />
-                Add Property
-              </Button>
             </div>
           </div>
         </CardContent>
